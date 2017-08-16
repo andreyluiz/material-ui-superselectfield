@@ -1,5 +1,5 @@
 # material-ui-superSelectField
-[![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] [![Package Quality][shield-image]][shield-url]
+[![npm][npm-image]][npm-url] [![downloads][downloads-image]][downloads-url] [![javascript style guide][standard-image]][standard-url] [![Package Quality][shield-image]][shield-url] [![Dependency Status][depstatus-image]][depstatus-url]
 
 [npm-image]: https://img.shields.io/npm/v/material-ui-superselectfield.svg
 [npm-url]: https://npmjs.org/package/material-ui-superselectfield
@@ -9,6 +9,8 @@
 [standard-url]: https://standardjs.com
 [shield-image]: http://npm.packagequality.com/shield/material-ui-superselectfield.svg
 [shield-url]: http://packagequality.com/#?package=material-ui-superselectfield
+[depstatus-image]: https://david-dm.org/Sharlaan/material-ui-superselectfield.svg
+[depstatus-url]: https://david-dm.org/Sharlaan/material-ui-superselectfield
 
 ## Table of Contents
 - [Preview](#preview)

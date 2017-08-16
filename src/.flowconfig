@@ -1,0 +1,8 @@
+[ignore]
+.*/assets/.*
+
+[include]
+
+[libs]
+
+[options]

@@ -17,7 +17,6 @@ const containerStyle = {
   flex: 1
 }
 const menuItemStyle = {
-  whiteSpace: 'normal',
   display: 'flex',
   justifyContent: 'space-between',
   lineHeight: 'normal'
@@ -92,7 +91,7 @@ class CodeExample extends Component {
                   <span style={{ fontWeight: 'bold' }}>{countryLabel}</span><br />
                   <span style={{ fontSize: 12 }}>{country.Capital}</span>
                 </div>
-                <FontIcon className={`flag-icon flag-icon-${countryCode}`} />
+                <FontIcon className={`flag-icon flag-icon-${countryCode}`}style={{ minWidth: 32 }} />
               </div>
             )
           })

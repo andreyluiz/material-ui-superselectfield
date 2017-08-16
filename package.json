@@ -11,30 +11,31 @@
   },
   "homepage": "https://sharlaan.github.io/material-ui-superselectfield",
   "engines": {
-    "node": ">=6"
+    "node": ">=8"
   },
   "main": "lib/SuperSelectField.js",
   "dependencies": {
-    "react-infinite": "^0.10.0",
-    "react-infinite-any-height": "^1.0.4"
+    "react-infinite": "^0.11.2"
   },
   "devDependencies": {
-    "babel-plugin-transform-class-properties": "^6.23.0",
+    "babel-plugin-transform-class-properties": "^6.24.1",
     "babel-plugin-transform-object-entries": "^1.0.0",
     "babel-plugin-transform-object-rest-spread": "^6.23.0",
-    "babel-preset-env": "^1.3.2",
-    "enzyme": "^2.8.0",
-    "eslint": "^3.19.0",
+    "babel-preset-env": "^1.6.0",
+    "enzyme": "^2.9.1",
+    "eslint": "^4.4.1",
     "flag-icon-css": "^2.8.0",
-    "gh-pages": "^0.12.0",
-    "material-ui": "^0.17.1",
-    "react": "^15.4.2",
-    "react-addons-test-utils": "^15.4.2",
-    "react-dom": "^15.4.2",
-    "react-router-dom": "^4.0.0",
-    "react-scripts": "^0.9.5",
+    "flow-bin": "^0.50.0",
+    "gh-pages": "^1.0.0",
+    "material-ui": "^0.18.7",
+    "npm-run-all": "^4.0.2",
+    "prop-types": "^15.5.10",
+    "react": "^15.6.1",
+    "react-dom": "^15.6.1",
+    "react-router-dom": "^4.1.2",
+    "react-scripts": "^1.0.11",
     "react-tap-event-plugin": "^2.0.1",
-    "standard": "^10.0.0"
+    "standard": "^10.0.3"
   },
   "peerDependencies": {
     "material-ui": ">= 0.15 < 1",
@@ -63,27 +64,18 @@
       "react"
     ]
   },
-  "eslintConfig": {
-    "extends": [
-      "react-app",
-      "standard"
-    ],
-    "rules": {
-      "camelcase": "off",
-      "brace-style": "off",
-      "no-trailing-spaces": "off",
-      "no-multiple-empty-lines": "off",
-      "no-unused-vars": "warn"
-    }
-  },
   "scripts": {
     "start": "react-scripts start",
     "build": "react-scripts build",
     "build:dist": "babel src/SuperSelectField.js -o lib/SuperSelectField.js",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d build",
-    "prerelease": "yarn deploy  &&  yarn build:dist  &&  git push",
-    "release": "yarn prerelease  &&  npm publish",
+    "push": "git push",
+    "prerelease": "run-s deploy build:dist push",
+    "release": "npm publish",
+    "flowversion": "flow version",
+    "flowls": "cd src  &&  flow ls | xargs du -hs | sort -h",
+    "typecheck": "cd src  &&  flow",
     "lint": "eslint src",
     "test": "react-scripts test --env=jsdom  --coverage",
     "eject": "react-scripts eject"

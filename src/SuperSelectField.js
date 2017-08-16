@@ -1,4 +1,6 @@
-import React, { Component, PropTypes, cloneElement, isValidElement } from 'react'
+// @flow
+import React, { Component, cloneElement, isValidElement } from 'react'
+import PropTypes from 'prop-types'
 import { findDOMNode } from 'react-dom'
 import InfiniteScroller from 'react-infinite'
 import Popover from 'material-ui/Popover/Popover'
@@ -31,6 +33,30 @@ function areEqual (val1, val2) {
 }
 
 const checkFormat = value => value.findIndex(v => typeof v !== 'object' || !('value' in v))
+
+// Counts nodes with non-null value property without optgroups
+// noinspection JSMethodCanBeStatic
+function getChildrenLength (children) {
+  if (!children) return 0
+  else if (Array.isArray(children) && children.length) {
+    return children.reduce((count, { type, props: {value, children: cpc} }) => {
+      if (type === 'optgroup') {
+        if (cpc) {
+          if (Array.isArray(cpc)) {
+            for (let c of cpc) {
+              if (c.props.value) ++count
+            }
+          } else if (typeof cpc === 'object' && cpc.props.value) ++count
+        }
+      } else if (value) ++count
+      return count
+    }, 0)
+  } else if (!Array.isArray(children) && typeof children === 'object') {
+    if (children.type === 'optgroup') return getChildrenLength(children.props.children)
+    else if (children.props.value) return 1
+  }
+  return 0
+}
 
 const objectShape = PropTypes.shape({
   value: PropTypes.any.isRequired,
@@ -75,6 +101,8 @@ const flexPolyfill = {
     flex: proportion
   })
 }
+
+
 
 // ================================================================
 // =======================  FloatingLabel  ========================
@@ -136,6 +164,8 @@ FloatingLabel.defaultProps = {
   shrink: false
 }
 
+
+
 // ================================================================
 // ====================  SelectionsPresenter  =====================
 // ================================================================
@@ -151,13 +181,13 @@ const selectionsPresenterStyles = {
   inner: { ...flexPolyfill.flex(1) }
 }
 
-const SelectionsPresenter = ({
+function SelectionsPresenter ({
   selectedValues, selectionsRenderer,
   floatingLabel, hintText,
   muiTheme, floatingLabelStyle, floatingLabelFocusStyle,
   underlineStyle, underlineFocusStyle,
   isFocused, isOpen, disabled
-}) => {
+}) {
   const { textField: {floatingLabelColor, borderColor, focusColor} } = muiTheme
 
   // Condition for animating floating Label color and underline
@@ -240,111 +270,73 @@ SelectionsPresenter.defaultProps = {
   }
 }
 
+
+
 // ================================================================
 // ========================  MenuFooter  ==========================
 // ================================================================
 
-// noinspection JSDuplicatedDeclaration
-const menuFooterStyles = {
-  ...flexPolyfill.displayFlex,
-  ...flexPolyfill.justifyContent.flexEnd,
-  ...flexPolyfill.alignItems.center
+function MenuFooter ({ children: parent, closeHandler }) {
+  if (parent && parent.props.children) {
+    let renderer = children => {
+      if (!children) return null
+      if (Array.isArray(children)) {
+        return children.map(node => /CLOSE/i.test(node.props['data-action'])
+          ? cloneElement(node, {onTouchTap: closeHandler})
+          : node
+        )
+      }
+      else if (isValidElement(children)) {
+        return /CLOSE/i.test(children.props['data-action'])
+          ? cloneElement(children, {onTouchTap: closeHandler})
+          : children
+      }
+    }
+    return <footer {...parent.props}>{renderer(parent.props.children)}</footer>
+  }
+  return null
 }
 
-const MenuFooter = ({ children, closeHandler, menuFooterStyle }) => (
-  <footer style={{ ...menuFooterStyles, ...menuFooterStyle }}>
-    {Array.isArray(children)
-      ? children.map(node => /CLOSE/i.test(node.props['data-action'])
-        ? cloneElement(node, { onTouchTap: closeHandler })
-        : node
-      )
-      : (isValidElement(children) && /CLOSE/i.test(children.props['data-action']))
-        ? cloneElement(children, { onTouchTap: closeHandler })
-        : children
-    }
-  </footer>
-)
-
 MenuFooter.propTypes = {
-  closeHandler: PropTypes.func
+  closeHandler: PropTypes.func,
+  children: PropTypes.element
 }
 
 MenuFooter.defaultProps = {
-  children: []
+  children: null
 }
 
+
+
 // ================================================================
-// ========================  SelectField  =========================
+// =======================  DropDown Menu  ========================
 // ================================================================
 
-class SelectField extends Component {
+class DropDownMenu extends Component {
   constructor (props, context) {
     super(props, context)
-    const { children, value, multiple, showAutocompleteThreshold } = props
-    const itemsLength = this.getChildrenLength(children)
+    const { itemsLength, showAutocompleteThreshold } = props
     this.state = {
-      isOpen: false,
-      isFocused: false,
-      itemsLength,
       showAutocomplete: (itemsLength > showAutocompleteThreshold) || false,
-      selectedItems: value || (multiple ? [] : null),
-      searchText: ''
+      searchText: '',
+      footerHeight: 0
     }
-    this.menuItems = []
+    this.menuItemNodes = []
   }
 
-  componentWillReceiveProps (nextProps) {
-    if (!areEqual(nextProps.value, this.state.selectedItems)) {
-      this.setState({ selectedItems: nextProps.value })
-    }
-    if (!areEqual(nextProps.children, this.props.children)) {
-      const itemsLength = this.getChildrenLength(nextProps.children)
-      this.setState({
-        itemsLength,
-        showAutocomplete: itemsLength > this.props.showAutocompleteThreshold
-      })
+  componentDidUpdate (prevProps) {
+    const { open, selectedItems } = this.props
+    // on opening, focus the autocomplete or the first menu item
+    open && open !== prevProps.open && this.focusTextField()
+
+    // on selection change, clear the autocomplete then give it focus
+    if (open && selectedItems !== prevProps.selectedItems) {
+      this.clearTextField(() => this.focusTextField())
     }
   }
 
-  // Counts nodes with non-null value property without optgroups
-  // noinspection JSMethodCanBeStatic
-  getChildrenLength (children) {
-    if (!children) return 0
-    else if (Array.isArray(children) && children.length) {
-      return children.reduce((count, { type, props: {value, children: cpc} }) => {
-        if (type === 'optgroup') {
-          if (cpc) {
-            if (Array.isArray(cpc)) {
-              for (let c of cpc) {
-                if (c.props.value) ++count
-              }
-            } else if (typeof cpc === 'object' && cpc.props.value) ++count
-          }
-        } else if (value) ++count
-        return count
-      }, 0)
-    } else if (!Array.isArray(children) && typeof children === 'object') {
-      if (children.type === 'optgroup') return this.getChildrenLength(children.props.children)
-      else if (children.props.value) return 1
-    }
-    return 0
-  }
-
-  onFocus = () => this.setState({ isFocused: true })
-
-  onBlur = (event) => {
-    if (!this.state.isOpen) this.setState({ isFocused: false })
-  }
-
-  closeMenu = (reason) => {
-    const { onChange, name } = this.props
-    onChange(this.state.selectedItems, name)
-    if (reason) this.setState({ isFocused: false }) // if reason === 'clickaway' or 'offscreen'
-    this.setState({ isOpen: false, searchText: '' }, () => !reason && this.root.focus())
-  }
-
-  openMenu () {
-    if (this.state.itemsLength) this.setState({ isOpen: true }, () => this.focusTextField())
+  componentDidMount () {
+    console.debug('footer', this.menuFooter)
   }
 
   focusTextField () {
@@ -355,7 +347,7 @@ class SelectField extends Component {
   }
 
   focusMenuItem (index) {
-    const targetMenuItem = this.menuItems.find(item => {
+    const targetMenuItem = this.menuItemNodes.find(item => {
       return !!item && (index ? item.props.tabIndex === index : true)
     })
 
@@ -366,15 +358,6 @@ class SelectField extends Component {
   clearTextField (callback) {
     this.setState({ searchText: '' }, callback)
   }
-
-  /**
-   * Main Component Wrapper methods
-   */
-  // toggle instead of close ? (in case user changes  targetOrigin/anchorOrigin)
-  handleClick = (event) => !this.props.disabled && this.openMenu()
-
-  handleKeyDown = (event) =>
-    !this.props.disabled && /ArrowDown|Enter/.test(event.key) && this.openMenu()
 
   /**
    * TextField autocomplete methods
@@ -392,38 +375,19 @@ class SelectField extends Component {
 
       case 'Escape':
         this.clearTextField()
-        this.closeMenu()
+        this.props.onRequestClose()
         break
 
       default: break
     }
   }
 
-  /**
-   * Menu methods
-   */
-  handleMenuSelection = (selectedItem) => (event) => {
-    event.preventDefault()
-    const { selectedItems } = this.state
-    if (this.props.multiple) {
-      const selectedItemExists = selectedItems.some(obj => areEqual(obj.value, selectedItem.value))
-      const updatedValues = selectedItemExists
-        ? selectedItems.filter(obj => !areEqual(obj.value, selectedItem.value))
-        : selectedItems.concat(selectedItem)
-      this.setState({ selectedItems: updatedValues })
-      this.clearTextField(() => this.focusTextField())
-    } else {
-      const updatedValue = areEqual(selectedItems, selectedItem) ? null : selectedItem
-      this.setState({ selectedItems: updatedValue }, () => this.closeMenu())
-    }
-  }
-
   // TODO: add Shift+Tab
   /**
-   * this.menuItems can contain uncontinuous React elements, because of filtering
+   * this.menuItemNodes can contain uncontinuous React elements, because of filtering
    */
   handleMenuKeyDown = ({ key, target: {tabIndex} }) => {
-    const cleanMenuItems = this.menuItems.filter(item => !!item)
+    const cleanMenuItems = this.menuItemNodes.filter(item => !!item)
     const firstTabIndex = cleanMenuItems[0].props.tabIndex
     const lastTabIndex = cleanMenuItems[ cleanMenuItems.length - 1 ].props.tabIndex
     const currentElementIndex = cleanMenuItems.findIndex(item => item.props.tabIndex === tabIndex)
@@ -466,7 +430,7 @@ class SelectField extends Component {
         break
 
       case 'Escape':
-        this.closeMenu()
+        this.props.onRequestClose()
         break
 
       default: break
@@ -474,22 +438,19 @@ class SelectField extends Component {
   }
 
   render () {
-    const { children, floatingLabel, hintText, hintTextAutocomplete, noMatchFound, multiple, disabled, nb2show,
-      autocompleteFilter, selectionsRenderer, footerRenderer, anchorOrigin,
-      style, menuStyle, elementHeight, innerDivStyle, selectedMenuItemStyle, menuGroupStyle, menuFooterStyle,
-      floatingLabelStyle, floatingLabelFocusStyle, underlineStyle, underlineFocusStyle,
-      autocompleteUnderlineStyle, autocompleteUnderlineFocusStyle,
+    const {
+      open, anchorEl, anchorOrigin, onRequestClose, hintTextAutocomplete,
+      children, autocompleteUnderlineStyle, autocompleteUnderlineFocusStyle,
+      disabled, menuStyle, menuWidth, noMatchFound, nb2show, elementHeight, footer,
+      multiple, autocompleteFilter, innerDivStyle, selectedMenuItemStyle, menuGroupStyle,
       checkedIcon, unCheckedIcon, hoverColor, checkPosition
     } = this.props
 
-    // Default style depending on Material-UI context (muiTheme)
-    const { baseTheme: {palette}, menuItem } = this.context.muiTheme
-
     const mergedSelectedMenuItemStyle = {
-      color: menuItem.selectedTextColor, ...selectedMenuItemStyle
+      color: this.context.muiTheme.menuItem.selectedTextColor, ...selectedMenuItemStyle
     }
     if (checkedIcon) checkedIcon.props.style.fill = mergedSelectedMenuItemStyle.color
-    const mergedHoverColor = hoverColor || menuItem.hoverColor
+    const mergedHoverColor = hoverColor || this.context.muiTheme.menuItem.hoverColor
 
     /**
      * MenuItems building, based on user's children
@@ -499,7 +460,7 @@ class SelectField extends Component {
      * accounting for optgroups.
      */
     const menuItemBuilder = (nodes, child, index) => {
-      const { selectedItems } = this.state
+      const { selectedItems } = this.props
       const { value: childValue, label } = child.props
       if (!autocompleteFilter(this.state.searchText, label || childValue)) return nodes
       const isSelected = Array.isArray(selectedItems)
@@ -515,8 +476,8 @@ class SelectField extends Component {
         <ListItem
           key={++index}
           tabIndex={index}
-          ref={ref => (this.menuItems[++index] = ref)}
-          onTouchTap={this.handleMenuSelection({ value: childValue, label })}
+          ref={ref => (this.menuItemNodes[++index] = ref)}
+          onTouchTap={this.props.onSelect({ value: childValue, label })}
           disableFocusRipple
           leftIcon={leftCheckbox}
           rightIcon={rightCheckbox}
@@ -535,7 +496,7 @@ class SelectField extends Component {
 
     const fixedChildren = Array.isArray(children) ? children : [children]
 
-    const menuItems = !disabled && fixedChildren.length && this.state.isOpen &&
+    const menuItems = !disabled && fixedChildren.length && open &&
       fixedChildren.reduce((nodes, child, index) => {
         if (child.type !== 'optgroup') return menuItemBuilder(nodes, child, index)
         const nextIndex = nodes.length ? +nodes[nodes.length - 1].key + 1 : 0
@@ -560,20 +521,149 @@ class SelectField extends Component {
       }, [])
 
     /*
-    const menuItemsHeights = this.state.isOpen
-      ? this.menuItems.map(item => findDOMNode(item).clientHeight) // can't resolve since items not rendered yet, need componentDiDMount
-      : elementHeight
-    */
+     const menuItemsHeights = this.state.isOpen
+     ? this.menuItemNodes.map(item => findDOMNode(item).clientHeight) // can't resolve since items not rendered yet, need componentDiDMount
+     : elementHeight
+     */
     const autoCompleteHeight = this.state.showAutocomplete ? 53 : 0
-    const footerHeight = footerRenderer ? 36 : 0
     const noMatchFoundHeight = 36
     const containerHeight = (Array.isArray(elementHeight)
       ? elementHeight.reduce((totalHeight, height) => totalHeight + height, 6)
       : elementHeight * (nb2show < menuItems.length ? nb2show : menuItems.length)
     ) || 0
-    const popoverHeight = autoCompleteHeight + (containerHeight || noMatchFoundHeight) + footerHeight
+    const popoverHeight = autoCompleteHeight + (containerHeight || noMatchFoundHeight) + this.state.footerHeight
     const scrollableStyle = { overflowY: nb2show >= menuItems.length ? 'hidden' : 'scroll' }
-    const menuWidth = this.root ? this.root.clientWidth : null
+
+    return (
+      <Popover
+        open={open}
+        anchorEl={anchorEl}
+        canAutoPosition={false}
+        useLayerForClickAway={false}
+        anchorOrigin={anchorOrigin}
+        onRequestClose={onRequestClose}
+        style={{ height: popoverHeight, width: menuWidth }}
+      >
+        {this.state.showAutocomplete &&
+        <TextField
+          ref={ref => (this.searchTextField = ref)}
+          value={this.state.searchText}
+          hintText={hintTextAutocomplete}
+          onChange={this.handleTextFieldAutocompletionFiltering}
+          onKeyDown={this.handleTextFieldKeyDown}
+          style={{ marginLeft: 16, marginBottom: 5, width: 'calc(100% - 32px)' }}
+          underlineStyle={autocompleteUnderlineStyle}
+          underlineFocusStyle={autocompleteUnderlineFocusStyle}
+        />
+        }
+        <div
+          ref={ref => (this.menu = ref)}
+          onKeyDown={this.handleMenuKeyDown}
+          style={{ ...menuStyle }}
+        >
+          {menuItems.length
+            ? <InfiniteScroller
+             elementHeight={elementHeight}
+             containerHeight={containerHeight}
+             styles={{ scrollableStyle }}
+           >
+             {menuItems}
+           </InfiniteScroller>
+            : <ListItem primaryText={noMatchFound} style={{ cursor: 'default', padding: '10px 16px' }} disabled />
+          }
+        </div>
+
+        <MenuFooter ref={ref => (this.menuFooter = ref)} closeHandler={onRequestClose}>
+          {footer}
+        </MenuFooter>
+      </Popover>
+    )
+  }
+}
+
+DropDownMenu.contextTypes = {
+  muiTheme: PropTypes.object.isRequired
+}
+
+DropDownMenu.propTypes = {}
+
+DropDownMenu.defaultProps = {}
+
+
+
+// ================================================================
+// ========================  SelectField  =========================
+// ================================================================
+
+class SelectField extends Component {
+  constructor (props, context) {
+    super(props, context)
+    const { children, value, multiple } = props
+    const itemsLength = getChildrenLength(children)
+    this.state = {
+      itemsLength,
+      isOpen: false,
+      isFocused: false,
+      selectedItems: value || (multiple ? [] : null),
+    }
+  }
+
+  componentWillReceiveProps (nextProps) {
+    if (!areEqual(nextProps.value, this.state.selectedItems)) {
+      this.setState({ selectedItems: nextProps.value })
+    }
+    if (!areEqual(nextProps.children, this.props.children)) {
+      const itemsLength = getChildrenLength(nextProps.children)
+      this.setState({ itemsLength })
+    }
+  }
+
+  onFocus = () => this.setState({ isFocused: true })
+
+  onBlur = (event) => {
+    if (!this.state.isOpen) this.setState({ isFocused: false })
+  }
+
+  closeMenu = (reason) => {
+    const { onChange, name } = this.props
+    onChange(this.state.selectedItems, name)
+    if (reason) this.setState({ isFocused: false }) // if reason === 'clickaway' or 'offscreen'
+    this.setState({ isOpen: false, searchText: '' }, () => !reason && this.root.focus())
+  }
+
+  openMenu () {
+    if (this.state.itemsLength) this.setState({ isOpen: true })
+  }
+
+  // toggle instead of close ? (in case user changes  targetOrigin/anchorOrigin)
+  handleClick = (event) => !this.props.disabled && this.openMenu()
+
+  handleKeyDown = (event) =>
+    !this.props.disabled && /ArrowDown|Enter/.test(event.key) && this.openMenu()
+
+  handleMenuSelection = (selectedItem) => (event) => {
+    event.preventDefault()
+    const { selectedItems } = this.state
+    if (this.props.multiple) {
+      const selectedItemExists = selectedItems.some(obj => areEqual(obj.value, selectedItem.value))
+      const updatedValues = selectedItemExists
+        ? selectedItems.filter(obj => !areEqual(obj.value, selectedItem.value))
+        : selectedItems.concat(selectedItem)
+      this.setState({ selectedItems: updatedValues })
+    } else {
+      const updatedValue = areEqual(selectedItems, selectedItem) ? null : selectedItem
+      this.setState({ selectedItems: updatedValue }, () => this.closeMenu())
+    }
+  }
+
+  render () {
+    const { children, floatingLabel, hintText, disabled, selectionsRenderer, style,
+      floatingLabelStyle, floatingLabelFocusStyle, underlineStyle, underlineFocusStyle,
+      ...other
+    } = this.props
+
+    // Default style depending on Material-UI context (muiTheme)
+    const { baseTheme: {palette} } = this.context.muiTheme
 
     return (
       <div
@@ -606,48 +696,19 @@ class SelectField extends Component {
           underlineFocusStyle={underlineFocusStyle}
         />
 
-        <Popover
-          open={this.state.isOpen}
+        <DropDownMenu
+          disabled={disabled}
           anchorEl={this.root}
-          canAutoPosition={false}
-          anchorOrigin={anchorOrigin}
-          useLayerForClickAway={false}
+          open={this.state.isOpen}
+          itemsLength={this.state.itemsLength}
+          selectedItems={this.state.selectedItems}
+          onSelect={this.handleMenuSelection}
+          menuWidth={this.root ? this.root.clientWidth : null}
           onRequestClose={this.closeMenu}
-          style={{ height: popoverHeight, width: menuWidth }}
+          {...other}
         >
-          {this.state.showAutocomplete &&
-            <TextField
-              ref={ref => (this.searchTextField = ref)}
-              value={this.state.searchText}
-              hintText={hintTextAutocomplete}
-              onChange={this.handleTextFieldAutocompletionFiltering}
-              onKeyDown={this.handleTextFieldKeyDown}
-              style={{ marginLeft: 16, marginBottom: 5, width: 'calc(100% - 32px)' }}
-              underlineStyle={autocompleteUnderlineStyle}
-              underlineFocusStyle={autocompleteUnderlineFocusStyle}
-            />
-          }
-          <div
-            ref={ref => (this.menu = ref)}
-            onKeyDown={this.handleMenuKeyDown}
-            style={{ ...menuStyle }}
-          >
-            {menuItems.length
-              ? <InfiniteScroller
-                  elementHeight={elementHeight}
-                  containerHeight={containerHeight}
-                  styles={{ scrollableStyle }}
-                >
-                  {menuItems}
-                </InfiniteScroller>
-              : <ListItem primaryText={noMatchFound} style={{ cursor: 'default', padding: '10px 16px' }} disabled />
-            }
-          </div>
-
-          <MenuFooter closeHandler={this.closeMenu} menuFooterStyle={menuFooterStyle}>
-            {footerRenderer}
-          </MenuFooter>
-        </Popover>
+          {children}
+        </DropDownMenu>
 
       </div>
     )
@@ -666,7 +727,6 @@ SelectField.propTypes = {
   style: PropTypes.object,
   menuStyle: PropTypes.object,
   menuGroupStyle: PropTypes.object,
-  menuFooterStyle: PropTypes.object,
   checkPosition: PropTypes.oneOf([ '', 'left', 'right' ]),
   checkedIcon: PropTypes.node,
   unCheckedIcon: PropTypes.node,
@@ -760,10 +820,7 @@ SelectField.propTypes = {
   },
   autocompleteFilter: PropTypes.func,
   selectionsRenderer: PropTypes.func,
-  footerRenderer: PropTypes.oneOfType([
-    PropTypes.element,
-    PropTypes.arrayOf(PropTypes.element)
-  ]),
+  footer: PropTypes.element,
   multiple: PropTypes.bool,
   disabled: PropTypes.bool,
   onChange: PropTypes.func,

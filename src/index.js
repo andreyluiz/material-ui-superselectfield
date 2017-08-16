@@ -1,6 +1,6 @@
 import React from 'react'
 import { render } from 'react-dom'
-import Router from 'react-router-dom/BrowserRouter'
+import Router from 'react-router-dom/HashRouter'
 import { blueGrey500, blueGrey700, lightBlue500, deepOrange400 } from 'material-ui/styles/colors'
 import MuiThemeProvider from 'material-ui/styles/MuiThemeProvider'
 import getMuiTheme from 'material-ui/styles/getMuiTheme'
@@ -28,7 +28,7 @@ const customTheme = getMuiTheme({
 
 render(
   <MuiThemeProvider muiTheme={customTheme}>
-    <Router>
+    <Router basename='/material-ui-superselectfield'>
       <App />
     </Router>
   </MuiThemeProvider>,

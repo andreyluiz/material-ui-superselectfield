@@ -18,9 +18,7 @@ const containerStyle = {
   flex: 1
 }
 const menuItemStyle = {
-  whiteSpace: 'normal',
   display: 'flex',
-  justifyContent: 'space-between',
   lineHeight: 'normal'
 }
 const chipAvatarStyle = {
@@ -106,11 +104,11 @@ class CodeExample extends Component {
 
       return (
         <div key={index} value={country} label={countryLabel} style={menuItemStyle}>
-          <div style={{ marginRight: 10 }}>
+          <FontIcon className={`flag-icon flag-icon-${countryCode}`} style={{ minWidth: 32 }} />
+          <div style={{ marginLeft: 20 }}>
             <span style={{ fontWeight: 'bold' }}>{countryLabel}</span><br />
             <span style={{ fontSize: 12 }}>{country.Capital}</span>
           </div>
-          <FontIcon className={`flag-icon flag-icon-${countryCode}`} />
         </div>
       )
     })
@@ -119,11 +117,13 @@ class CodeExample extends Component {
       <div key={id} value={id} label={name}>{name}</div>
     ))
 
-    const footerRenderer = [
-      <FlatButton key='footerButtonAdd' label='add' hoverColor={teal500} />,
-      <FlatButton key='footerButtonReset' label='reset' hoverColor='lightSalmon' />,
-      <FlatButton key='footerButtonClose' label='close' hoverColor={pink500} data-action='CLOSE' />
-    ]
+    const footer = (
+      <footer style={{ display: 'flex', justifyContent: 'flex-end', alignItems: 'center', flexWrap: 'wrap' }}>
+        <FlatButton key='footerButtonAdd' label='add' hoverColor={teal500} style={{flex: 0.5}} />
+        <FlatButton key='footerButtonReset' label='reset' hoverColor='lightSalmon' style={{flex: 0.5}} />
+        <FlatButton key='footerButtonClose' label='close' hoverColor={pink500} data-action='CLOSE' style={{flex: 1}} />
+      </footer>
+    )
 
     const CustomFloatingLabel = (
       <span>
@@ -173,7 +173,7 @@ class CodeExample extends Component {
           hoverColor='rgba(3, 169, 244, 0.15)'
           anchorOrigin={{ vertical: 'bottom', horizontal: 'left' }}
           style={{ width: 200, marginTop: 20 }}
-          footerRenderer={footerRenderer}
+          footer={footer}
         >
           {dataSourceNodes}
         </SuperSelectField>
