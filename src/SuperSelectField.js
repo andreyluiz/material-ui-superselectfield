@@ -114,7 +114,6 @@ const styles = {
     WebkitJustifyContent: 'flex-end',
     msFlexPack: 'end',
     OJustifyContent: 'flex-end',
-    justifyContent: 'flex-end',
     WebkitAlignItems: 'center',
     MozAlignItems: 'center',
     msAlignItems: 'center',
@@ -127,7 +126,8 @@ const styles = {
     WebkitFlex: 1,
     msFlex: 1,
     OFlex: 1,
-    flex: 1
+    flex: 1,
+    paddingBottom: 4
   }
 }
 
