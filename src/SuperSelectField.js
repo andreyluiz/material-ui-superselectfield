@@ -175,7 +175,7 @@ const SelectionsPresenter = ({
   return (
     <div>
       <div style={styles.div1}>
-        <div style={styles.div2}>
+        <div style={styles.div2} title={floatingLabel ? floatingLabel : selectionsRenderer(selectedValues, hintText)}>
           {floatingLabel &&
             <FloatingLabel
               shrink={shrinkCondition}
