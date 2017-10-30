@@ -544,6 +544,7 @@ class SelectField extends Component {
           color: disabled ? palette.disabledColor : palette.textColor,
           ...style
         }}
+        id="super-selectfield-popover"
       >
 
         <SelectionsPresenter
@@ -587,7 +588,6 @@ class SelectField extends Component {
             ref={ref => (this.menu = ref)}
             onKeyDown={this.handleMenuKeyDown}
             style={{ width: menuWidth, ...menuStyle }}
-            className="super-selectfield-menu-list"
           >
             {menuItems.length
               ? <InfiniteScroller
