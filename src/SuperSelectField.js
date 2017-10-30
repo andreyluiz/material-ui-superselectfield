@@ -587,6 +587,7 @@ class SelectField extends Component {
             ref={ref => (this.menu = ref)}
             onKeyDown={this.handleMenuKeyDown}
             style={{ width: menuWidth, ...menuStyle }}
+            className="super-selectfield-menu-list"
           >
             {menuItems.length
               ? <InfiniteScroller
